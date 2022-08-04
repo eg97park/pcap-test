@@ -123,14 +123,14 @@ int main(int argc, char* argv[]) {
 			return -1;
 		}
 
-		// print only IPv4 pacekts.
+		// print only IPv4 packets.
 		if (ntohs(pakcet_hdr->ETH.TYPE) != ETH_TYPE_IPV4){
 			free(pakcet_hdr);
 			pakcet_hdr = NULL;
 			continue;
 		}
 
-		// print only TCP pacekts.
+		// print only TCP packets.
 		if (pakcet_hdr->IPV4.PROTOCOL != IP_PROTO_TCP){
 			free(pakcet_hdr);
 			pakcet_hdr = NULL;
