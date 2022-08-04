@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <memory.h>
 #include <string.h>
+#include <stdlib.h>
 
 #pragma pack(1)	// Disable C Stuct PADDING. https://www.geeksforgeeks.org/how-to-avoid-structure-padding-in-c/
 const uint8_t MAX_PAYLOAD_PRINT_SIZE = 10;
@@ -106,26 +107,34 @@ int main(int argc, char* argv[]) {
 			printf("pcap_next_ex return %d(%s)\n", res, pcap_geterr(pcap));
 			break;
 		}
-		struct MY_PACKET_HEADER_IPV4_TCP pakcet_hdr;
+		struct MY_PACKET_HEADER_IPV4_TCP* pakcet_hdr;
+		if ((pakcet_hdr = (struct MY_PACKET_HEADER_IPV4_TCP*)malloc(header->caplen)) == NULL){
+			printf("malloc failed");
+			return -1;
+		}
 		
 		// force do memcpy.
-		memcpy(&(pakcet_hdr), packet, header->caplen);
+		memcpy(pakcet_hdr, packet, header->caplen);
 
 		// print only IPv4 pacekts.
-		if (ntohs(pakcet_hdr.ETH.TYPE) != ETH_TYPE_IPV4){
+		if (ntohs(pakcet_hdr->ETH.TYPE) != ETH_TYPE_IPV4){
+			free(pakcet_hdr);
+			pakcet_hdr = NULL;
 			continue;
 		}
 
 		// print only TCP pacekts.
-		if (pakcet_hdr.IPV4.PROTOCOL != IP_PROTO_TCP){
+		if (pakcet_hdr->IPV4.PROTOCOL != IP_PROTO_TCP){
+			free(pakcet_hdr);
+			pakcet_hdr = NULL;
 			continue;
 		}
 
 		// print source mac address.
 		printf("SRC_MAC_ADDR: ");
-		for (size_t _ = 0; _ < sizeof(pakcet_hdr.ETH.SRC_MAC_ADDR); _++){
-			printf("%02x", pakcet_hdr.ETH.SRC_MAC_ADDR[_]);
-			if (_ != sizeof(pakcet_hdr.ETH.SRC_MAC_ADDR) - 1){
+		for (size_t _ = 0; _ < sizeof(pakcet_hdr->ETH.SRC_MAC_ADDR); _++){
+			printf("%02x", pakcet_hdr->ETH.SRC_MAC_ADDR[_]);
+			if (_ != sizeof(pakcet_hdr->ETH.SRC_MAC_ADDR) - 1){
 				printf(":");
 			}
 		}
@@ -133,35 +142,35 @@ int main(int argc, char* argv[]) {
 
 		// print destination mac address.
 		printf("DST_MAC_ADDR: ");
-		for (size_t _ = 0; _ < sizeof(pakcet_hdr.ETH.DST_MAC_ADDR); _++){
-			printf("%02x", pakcet_hdr.ETH.DST_MAC_ADDR[_]);
-			if (_ != sizeof(pakcet_hdr.ETH.DST_MAC_ADDR) - 1){
+		for (size_t _ = 0; _ < sizeof(pakcet_hdr->ETH.DST_MAC_ADDR); _++){
+			printf("%02x", pakcet_hdr->ETH.DST_MAC_ADDR[_]);
+			if (_ != sizeof(pakcet_hdr->ETH.DST_MAC_ADDR) - 1){
 				printf(":");
 			}
 		}
 		printf("\n");
 
 		// print source ip address.
-		uint32_t SRC_IP_ADDR = ntohl(pakcet_hdr.IPV4.SRC_IP_ADDR);
+		uint32_t SRC_IP_ADDR = ntohl(pakcet_hdr->IPV4.SRC_IP_ADDR);
 		printf("SRC_IP_ADDR: ");
 		printf("%d.%d.%d.%d\n", (uint8_t)(SRC_IP_ADDR >> 24), (uint8_t)(SRC_IP_ADDR >> 16), (uint8_t)(SRC_IP_ADDR >> 8), (uint8_t)(SRC_IP_ADDR));
 
 		// print destination ip address.
-		uint32_t DST_IP_ADDR = ntohl(pakcet_hdr.IPV4.DST_IP_ADDR);
+		uint32_t DST_IP_ADDR = ntohl(pakcet_hdr->IPV4.DST_IP_ADDR);
 		printf("DST_IP_ADDR: ");
 		printf("%d.%d.%d.%d\n", (uint8_t)(DST_IP_ADDR >> 24), (uint8_t)(DST_IP_ADDR >> 16), (uint8_t)(DST_IP_ADDR >> 8), (uint8_t)(DST_IP_ADDR));
 		
 		// print source port number.
-		printf("SRC_PORT: %d\n", ntohs(pakcet_hdr.TCP.SRC_PORT));
+		printf("SRC_PORT: %d\n", ntohs(pakcet_hdr->TCP.SRC_PORT));
 
 		// print destination port number.
-		printf("DST_PORT: %d\n", ntohs(pakcet_hdr.TCP.DST_PORT));
+		printf("DST_PORT: %d\n", ntohs(pakcet_hdr->TCP.DST_PORT));
 
 		// calculate tcp data length to print tcp payload.
 		uint16_t ETH_HEADER_LENGTH = 14;
-		uint16_t IP_HEADER_LENGTH = pakcet_hdr.IPV4.IHL * 4;
-		uint16_t IP_TOTAL_LENGTH = ntohs(pakcet_hdr.IPV4.TOTAL_LEN);
-		uint16_t TCP_HEADER_LENGTH = pakcet_hdr.TCP.DATA_OFFSET * 4;
+		uint16_t IP_HEADER_LENGTH = pakcet_hdr->IPV4.IHL * 4;
+		uint16_t IP_TOTAL_LENGTH = ntohs(pakcet_hdr->IPV4.TOTAL_LEN);
+		uint16_t TCP_HEADER_LENGTH = pakcet_hdr->TCP.DATA_OFFSET * 4;
 		uint16_t TCP_DATA_LENGTH = IP_TOTAL_LENGTH - (IP_HEADER_LENGTH + TCP_HEADER_LENGTH);
 
 		if (TCP_DATA_LENGTH <= 0){
@@ -186,6 +195,8 @@ int main(int argc, char* argv[]) {
 			printf("\n");
 		}
 		printf("--------------------------------------\n");
+		free(pakcet_hdr);
+		pakcet_hdr = NULL;
 	}
 	pcap_close(pcap);
 }
