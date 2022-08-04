@@ -7,6 +7,9 @@
 #include <string.h>
 
 #pragma pack(1)	// Disable C Stuct PADDING. https://www.geeksforgeeks.org/how-to-avoid-structure-padding-in-c/
+const uint8_t MAX_PAYLOAD_PRINT_SIZE = 10;
+const uint8_t IP_PROTO_TCP = 0x06;
+const uint16_t ETH_TYPE_IPV4 = 0x0800;
 
 struct MY_ETH{
 	uint8_t DST_MAC_ADDR[6];
@@ -15,7 +18,7 @@ struct MY_ETH{
 };
 
 
-struct MY_IP{
+struct MY_IPV4{
 #if BYTE_ORDER == LITTLE_ENDIAN
 	u_char IHL:4;
 	u_char VER:4;
@@ -54,9 +57,9 @@ struct MY_TCP{
 };
 
 
-struct MY_PACKET_HDR{
+struct MY_PACKET_HEADER_IPV4_TCP{
 	struct MY_ETH ETH;
-	struct MY_IP IP;
+	struct MY_IPV4 IPV4;
 	struct MY_TCP TCP;
 };
 
@@ -103,97 +106,86 @@ int main(int argc, char* argv[]) {
 			printf("pcap_next_ex return %d(%s)\n", res, pcap_geterr(pcap));
 			break;
 		}
-		struct MY_PACKET_HDR pakcet_hdr;
+		struct MY_PACKET_HEADER_IPV4_TCP pakcet_hdr;
 		
+		// force do memcpy.
 		memcpy(&(pakcet_hdr), packet, header->caplen);
 
-		// DST_MAC_ADDR
-		printf("ETH.DST_MAC_ADDR: ");
-		for (size_t _ = 0; _ < sizeof(pakcet_hdr.ETH.DST_MAC_ADDR); _++){
-			printf("%02x ", pakcet_hdr.ETH.DST_MAC_ADDR[_]);
+		// print only IPv4 pacekts.
+		if (ntohs(pakcet_hdr.ETH.TYPE) != ETH_TYPE_IPV4){
+			continue;
 		}
-		printf("\n");
 
-		// SRC_MAC_ADDR
-		printf("ETH.SRC_MAC_ADDR: ");
+		// print only TCP pacekts.
+		if (pakcet_hdr.IPV4.PROTOCOL != IP_PROTO_TCP){
+			continue;
+		}
+
+		// print source mac address.
+		printf("SRC_MAC_ADDR: ");
 		for (size_t _ = 0; _ < sizeof(pakcet_hdr.ETH.SRC_MAC_ADDR); _++){
-			printf("%02x ", pakcet_hdr.ETH.SRC_MAC_ADDR[_]);
+			printf("%02x", pakcet_hdr.ETH.SRC_MAC_ADDR[_]);
+			if (_ != sizeof(pakcet_hdr.ETH.SRC_MAC_ADDR) - 1){
+				printf(":");
+			}
 		}
 		printf("\n");
 
-		/*
-		// ETH_TYPE
-		if (ntohs(pakcet_hdr.ETH.TYPE) == 0x0800){
-			// IPv4
-			printf("ether_type: %04x (IPv4)\n", ntohs(pakcet_hdr.ETH.TYPE));
+		// print destination mac address.
+		printf("DST_MAC_ADDR: ");
+		for (size_t _ = 0; _ < sizeof(pakcet_hdr.ETH.DST_MAC_ADDR); _++){
+			printf("%02x", pakcet_hdr.ETH.DST_MAC_ADDR[_]);
+			if (_ != sizeof(pakcet_hdr.ETH.DST_MAC_ADDR) - 1){
+				printf(":");
+			}
 		}
-		else if (ntohs(pakcet_hdr.ETH.TYPE) == 0x86DD){
-			// IPv6
-			printf("ether_type: %04x (IPv6)\n", ntohs(pakcet_hdr.ETH.TYPE));
-		}
-		else if (ntohs(pakcet_hdr.ETH.TYPE) == 0x0806){
-			// ARP
-			printf("ether_type: %04x (ARP)\n", ntohs(pakcet_hdr.ETH.TYPE));
-		}
-		else{
-			// ETC
-			printf("ether_type: %04x (ETC)\n", ntohs(pakcet_hdr.ETH.TYPE));
-		}
-		*/
+		printf("\n");
 
-		// IP
-		/*
-		printf("IP.VER: %02x \n", pakcet_hdr.IP.VER);
-		printf("IP.IHL: %02x \n", pakcet_hdr.IP.IHL);
-		printf("IP.DSCP_ECN: %02x \n", pakcet_hdr.IP.DSCP_ECN);
-		printf("IP.TOTAL_LENGTH: %04x \n", ntohs(pakcet_hdr.IP.TOTAL_LEN));
-		printf("IP.IDENTIFICATION: %04x \n", ntohs(pakcet_hdr.IP.ID));
-		printf("IP.FLAGS_FRAGOFFSET: %04x \n", ntohs(pakcet_hdr.IP.FLAG_FRAGOFFSET));
-		printf("IP.TTL: %02x \n", pakcet_hdr.IP.TTL);
-		printf("IP.PROTOCOL: %02x \n", pakcet_hdr.IP.PROTOCOL);
-		printf("IP.HEADER_CHKSUM: %04x \n", ntohs(pakcet_hdr.IP.HDR_CHKSUM));
-		*/
-		printf("IP.SRC_IP_ADDR: %08x \n", ntohl(pakcet_hdr.IP.SRC_IP_ADDR));
-		printf("IP.DST_IP_ADDR: %08x \n", ntohl(pakcet_hdr.IP.DST_IP_ADDR));
-		printf("TCP.SRC_PORT: %04x \n", ntohs(pakcet_hdr.TCP.SRC_PORT));
-		printf("TCP.DST_PORT: %04x \n", ntohs(pakcet_hdr.TCP.DST_PORT));
+		// print source ip address.
+		uint32_t SRC_IP_ADDR = ntohl(pakcet_hdr.IPV4.SRC_IP_ADDR);
+		printf("SRC_IP_ADDR: ");
+		printf("%d.%d.%d.%d\n", (uint8_t)(SRC_IP_ADDR >> 24), (uint8_t)(SRC_IP_ADDR >> 16), (uint8_t)(SRC_IP_ADDR >> 8), (uint8_t)(SRC_IP_ADDR));
+
+		// print destination ip address.
+		uint32_t DST_IP_ADDR = ntohl(pakcet_hdr.IPV4.DST_IP_ADDR);
+		printf("DST_IP_ADDR: ");
+		printf("%d.%d.%d.%d\n", (uint8_t)(DST_IP_ADDR >> 24), (uint8_t)(DST_IP_ADDR >> 16), (uint8_t)(DST_IP_ADDR >> 8), (uint8_t)(DST_IP_ADDR));
 		
-		/*
-		printf("TCP.SEQ_NUM: %08x \n", ntohl(pakcet_hdr.TCP.SEQ_NUM));
-		printf("TCP.ACK_NUM: %08x \n", ntohl(pakcet_hdr.TCP.ACK_NUM));
-		printf("TCP.DATA_OFFSET: %02x \n", pakcet_hdr.TCP.DATA_OFFSET);
-		printf("TCP.FLAGS_RESERVED_NS: %02x \n", pakcet_hdr.TCP.FLAGS_RESERVED_NS);
-		printf("TCP.FLAGS_ETC: %02x \n", pakcet_hdr.TCP.FLAGS_ETC);
-		printf("TCP.WIN_SIZE: %04x \n", ntohs(pakcet_hdr.TCP.WIN_SIZE));
-		printf("TCP.CHKSUM: %04x \n", ntohs(pakcet_hdr.TCP.CHKSUM));
-		printf("TCP.URG_PTR: %04x \n", ntohs(pakcet_hdr.TCP.URG_PTR));
-		*/
+		// print source port number.
+		printf("SRC_PORT: %d\n", ntohs(pakcet_hdr.TCP.SRC_PORT));
 
+		// print destination port number.
+		printf("DST_PORT: %d\n", ntohs(pakcet_hdr.TCP.DST_PORT));
+
+		// calculate tcp data length to print tcp payload.
 		uint16_t ETH_HEADER_LENGTH = 14;
-		uint16_t IP_HEADER_LENGTH = pakcet_hdr.IP.IHL * 4;
-		uint16_t IP_TOTAL_LENGTH = ntohs(pakcet_hdr.IP.TOTAL_LEN);
+		uint16_t IP_HEADER_LENGTH = pakcet_hdr.IPV4.IHL * 4;
+		uint16_t IP_TOTAL_LENGTH = ntohs(pakcet_hdr.IPV4.TOTAL_LEN);
 		uint16_t TCP_HEADER_LENGTH = pakcet_hdr.TCP.DATA_OFFSET * 4;
 		uint16_t TCP_DATA_LENGTH = IP_TOTAL_LENGTH - (IP_HEADER_LENGTH + TCP_HEADER_LENGTH);
-		printf("IP_HEADER_LENGTH= %d\n", IP_HEADER_LENGTH);
-		printf("IP_TOTAL_LENGTH= %d\n", IP_TOTAL_LENGTH);
-		printf("TCP_HEADER_LENGTH= %d\n", TCP_HEADER_LENGTH);
-		printf("TCP_DATA_LENGTH= %d\n", TCP_DATA_LENGTH);
 
 		if (TCP_DATA_LENGTH <= 0){
-			printf("NO DATA\n");
+			// no payload.
+			printf("PAYLOAD: NO DATA\n");
 		}
 		else{
+			// payload found. calculate payload length.
+			size_t PAYLOAD_LENGTH = ETH_HEADER_LENGTH + IP_HEADER_LENGTH + TCP_HEADER_LENGTH;
+			
 			printf("PAYLOAD: ");
-			size_t PAYLOAD_OFFSET = ETH_HEADER_LENGTH + IP_HEADER_LENGTH + TCP_HEADER_LENGTH;
-			printf("PAYLOAD_OFFSET=%ld\tTCP_DATA_LENGTH=%d\n", PAYLOAD_OFFSET, TCP_DATA_LENGTH);
-			for (size_t _ = 0; _ < TCP_DATA_LENGTH; _++){
-				printf("%02x ", packet[PAYLOAD_OFFSET + _]);
+			if (PAYLOAD_LENGTH < MAX_PAYLOAD_PRINT_SIZE){
+				for (size_t _ = 0; _ < PAYLOAD_LENGTH; _++){
+					printf("%02x ", packet[PAYLOAD_LENGTH + _]);
+				}
+			}
+			else{
+				for (size_t _ = 0; _ < MAX_PAYLOAD_PRINT_SIZE; _++){
+					printf("%02x ", packet[PAYLOAD_LENGTH + _]);
+				}
 			}
 			printf("\n");
 		}
-		
-		printf("%u bytes captured\n\n", header->caplen);
+		printf("--------------------------------------\n");
 	}
-
 	pcap_close(pcap);
 }
