@@ -8,6 +8,7 @@
 #include <stdlib.h>
 
 #pragma pack(1)	// Disable C Stuct PADDING. https://www.geeksforgeeks.org/how-to-avoid-structure-padding-in-c/
+
 const uint8_t MAX_PAYLOAD_PRINT_SIZE = 10;
 const uint8_t IP_PROTO_TCP = 0x06;
 const uint16_t ETH_TYPE_IPV4 = 0x0800;
@@ -49,7 +50,7 @@ struct MY_TCP{
 	u_char DATA_OFFSET:4;
 #else
 	u_char DATA_OFFSET:4;
-	u_char FLAGS:4;
+	u_char FLAGS_RESERVED_NS:4;
 #endif
 	uint8_t FLAGS_ETC:4;
 	uint16_t WIN_SIZE;
@@ -199,4 +200,5 @@ int main(int argc, char* argv[]) {
 		pakcet_hdr = NULL;
 	}
 	pcap_close(pcap);
+	return 0;
 }
