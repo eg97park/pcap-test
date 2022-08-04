@@ -118,6 +118,10 @@ int main(int argc, char* argv[]) {
 		
 		// force do memcpy.
 		memcpy(pakcet_hdr, packet, header->caplen);
+		if (pakcet_hdr == NULL){
+			printf("memcpy failed");
+			return -1;
+		}
 
 		// print only IPv4 pacekts.
 		if (ntohs(pakcet_hdr->ETH.TYPE) != ETH_TYPE_IPV4){
