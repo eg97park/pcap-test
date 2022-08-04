@@ -1,4 +1,4 @@
-LDLIBS += -lpcap -g
+LDLIBS += -lpcap
 
 all: pcap-test
 
