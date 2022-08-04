@@ -7,19 +7,22 @@
 #include <string.h>
 #include <stdlib.h>
 
-#pragma pack(1)	// Disable C Stuct PADDING. https://www.geeksforgeeks.org/how-to-avoid-structure-padding-in-c/
+// Disable C Stuct PADDING. https://www.geeksforgeeks.org/how-to-avoid-structure-padding-in-c/
+#pragma pack(1)
 
+// My constants.
 const uint8_t MAX_PAYLOAD_PRINT_SIZE = 10;
 const uint8_t IP_PROTO_TCP = 0x06;
 const uint16_t ETH_TYPE_IPV4 = 0x0800;
 
+// My ethernet header.
 struct MY_ETH{
 	uint8_t DST_MAC_ADDR[6];
 	uint8_t SRC_MAC_ADDR[6];
 	uint16_t TYPE;
 };
 
-
+// My ipv4 header.
 struct MY_IPV4{
 #if BYTE_ORDER == LITTLE_ENDIAN
 	u_char IHL:4;
@@ -39,7 +42,7 @@ struct MY_IPV4{
 	uint32_t DST_IP_ADDR;
 };
 
-
+// My tcp header.
 struct MY_TCP{
 	uint16_t SRC_PORT;
 	uint16_t DST_PORT;
@@ -58,13 +61,12 @@ struct MY_TCP{
 	uint16_t URG_PTR;
 };
 
-
+// My packet header for IPv4 && TCP.
 struct MY_PACKET_HEADER_IPV4_TCP{
 	struct MY_ETH ETH;
 	struct MY_IPV4 IPV4;
 	struct MY_TCP TCP;
 };
-
 
 void usage() {
 	printf("syntax: pcap-test <interface>\n");
