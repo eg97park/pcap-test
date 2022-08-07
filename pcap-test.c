@@ -110,6 +110,8 @@ int main(int argc, char* argv[]) {
 			printf("pcap_next_ex return %d(%s)\n", res, pcap_geterr(pcap));
 			break;
 		}
+
+		// !TODO: IPV4, TCP 헤더 확인 후 메모리 할당할 것.
 		struct MY_PACKET_HEADER_IPV4_TCP* pakcet_hdr;
 		if ((pakcet_hdr = (struct MY_PACKET_HEADER_IPV4_TCP*)malloc(header->caplen)) == NULL){
 			printf("malloc failed");
@@ -157,6 +159,7 @@ int main(int argc, char* argv[]) {
 		}
 		printf("\n");
 
+		// !TODO: 자료형 unsigned임. printf에 %d가 아니라 %ld 사용할 것.
 		// print source ip address.
 		uint32_t SRC_IP_ADDR = ntohl(pakcet_hdr->IPV4.SRC_IP_ADDR);
 		printf("SRC_IP_ADDR: ");
@@ -173,6 +176,7 @@ int main(int argc, char* argv[]) {
 		// print destination port number.
 		printf("DST_PORT: %d\n", ntohs(pakcet_hdr->TCP.DST_PORT));
 
+		// !WARN: TCP_DATA_LENGTH 이렇게 구해야 함. 전체에서 빼는 방식으로 가면 VLAN TAG도 잡히는 경우도 있음.
 		// calculate tcp data length to print tcp payload.
 		uint16_t ETH_HEADER_LENGTH = 14;
 		uint16_t IP_HEADER_LENGTH = pakcet_hdr->IPV4.IHL * 4;
